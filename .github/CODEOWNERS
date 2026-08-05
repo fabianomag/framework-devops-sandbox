@@ -1,0 +1,58 @@
+# CODEOWNERS
+#
+# Declares @fabianomag as the owner of the protected content of this
+# laboratory: the automation, the governance configuration and the normative
+# documents.
+#
+# STATUS: this file is currently DECLARATIVE ONLY.
+#
+# The ruleset `protect-main` ships with `require_code_owner_review: false`,
+# because a personal repository with a single active participant has nobody
+# else who could satisfy a code owner review. Until the second participant
+# accepts the invitation, GitHub would either block every merge or ignore the
+# rule, and neither teaches anything.
+#
+# Ownership is declared here anyway so that turning the rule on later is a
+# configuration change and not a redesign.
+#
+# HOW TO ACTIVATE, after the second participant accepts the collaborator
+# invitation (exact steps also in ACESSOS-E-PAPEIS.md):
+#
+#   1. Require one approval:
+#      Settings -> Rules -> protect-main -> Require a pull request before
+#      merging -> Required approvals: 1
+#      API: rules[type=pull_request].parameters.required_approving_review_count = 1
+#
+#   2. Require the approval to come from somebody other than the last person
+#      who pushed:
+#      same screen -> "Require approval of the most recent reviewable push"
+#      API: rules[type=pull_request].parameters.require_last_push_approval = true
+#
+#   3. Require a review from a CODEOWNER, which is what makes this file bind:
+#      same screen -> "Require review from Code Owners"
+#      API: rules[type=pull_request].parameters.require_code_owner_review = true
+#
+# Do all three only once the second participant can actually approve, and
+# record the change in DECISIONS.md. Note that step 2 and step 3 together mean
+# @fabianomag can no longer merge his own change to a protected path
+# unassisted, which is the intended lesson about separation of duties.
+
+# Everything, unless a more specific rule below overrides it.
+# The last matching pattern wins in CODEOWNERS.
+*                                   @fabianomag
+
+# Automation and governance: the protected content of the lab.
+/.github/                           @fabianomag
+/.github/workflows/                 @fabianomag
+/.github/governance/                @fabianomag
+/.github/CODEOWNERS                 @fabianomag
+
+# Normative documents: the rules of the lab and the record of its decisions.
+/AGENTS.md                          @fabianomag
+/CLAUDE.md                          @fabianomag
+/DEVOPS-LAB-SPEC.md                 @fabianomag
+/DECISIONS.md                       @fabianomag
+/ACESSOS-E-PAPEIS.md                @fabianomag
+
+# Source and tests are intentionally NOT restricted beyond the wildcard above.
+# The second participant is meant to change these freely during the exercises.

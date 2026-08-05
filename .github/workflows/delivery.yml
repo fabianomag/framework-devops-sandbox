@@ -1,0 +1,313 @@
+name: Delivery
+run-name: >-
+  Promote ${{ inputs.source_ref || github.ref_name }}
+  (${{ github.event_name == 'push' && 'release' || 'rollback' }})
+
+# Two entry points, deliberately different in effect:
+#
+#   push of a SemVer tag  -> the normal release path. Builds, promotes through
+#                            the three environments and then publishes or
+#                            updates the GitHub Release.
+#   workflow_dispatch     -> the rollback exercise. Promotes an EARLIER tag
+#                            through the same environments and never touches
+#                            any release.
+#
+# The humans create the tags. This workflow is never dispatched by the agent.
+on:
+  push:
+    tags:
+      - "v[0-9]+.[0-9]+.[0-9]+"
+      - "v[0-9]+.[0-9]+.[0-9]+-rc.[0-9]+"
+  workflow_dispatch:
+    inputs:
+      source_ref:
+        description: >-
+          Existing annotated SemVer tag to roll back to, for example v0.1.0.
+          Promotion only; no release is created or updated.
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: delivery
+  cancel-in-progress: false
+
+env:
+  PYTHON_VERSION: "3.14"
+  ARTIFACT_NAME: framework-demo-${{ github.run_id }}
+  # The single source of truth for which tag is being delivered. On a tag push
+  # this is the pushed tag; on a dispatch it is the tag the operator chose.
+  SOURCE_REF: ${{ inputs.source_ref || github.ref_name }}
+
+jobs:
+  build:
+    name: build-artifact
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    outputs:
+      source_ref: ${{ steps.origin.outputs.source_ref }}
+      source_commit: ${{ steps.origin.outputs.source_commit }}
+
+    steps:
+      # Actions are pinned by full commit SHA. The trailing comment records the
+      # semver tag that SHA carried when it was verified against the upstream
+      # repository. Never change the SHA and the comment independently.
+      - name: Checkout selected source
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          ref: ${{ env.SOURCE_REF }}
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      # A checkout by tag does not create refs/remotes/origin/main and does not
+      # guarantee that the tag objects are present. Both are fetched explicitly
+      # so the verification below can actually fail when it should, instead of
+      # failing for a missing ref and looking like a policy violation.
+      - name: Fetch main and tags explicitly
+        run: |
+          git fetch --force --quiet origin \
+            "+refs/tags/*:refs/tags/*" \
+            "+refs/heads/main:refs/remotes/origin/main"
+
+      # Nothing downstream may call this tag "trusted" until every one of these
+      # proofs has passed. Each check prints what it proved.
+      - name: Verify the origin of the source
+        id: origin
+        run: |
+          set -euo pipefail
+
+          echo "::group::1. SemVer shape"
+          if ! [[ "$SOURCE_REF" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-rc\.[0-9]+)?$ ]]; then
+            echo "source_ref '$SOURCE_REF' does not match vX.Y.Z or vX.Y.Z-rc.N"
+            exit 1
+          fi
+          echo "ok: '$SOURCE_REF' is a SemVer tag name"
+          echo "::endgroup::"
+
+          echo "::group::2. The tag exists and is annotated"
+          if ! git show-ref --verify --quiet "refs/tags/$SOURCE_REF"; then
+            echo "tag '$SOURCE_REF' does not exist in this repository"
+            exit 1
+          fi
+          # A lightweight tag points straight at a commit. An annotated tag is a
+          # tag object carrying an author, a date and a message, which is what
+          # the lab requires as a deliberate, attributable act.
+          tag_object_type="$(git cat-file -t "refs/tags/$SOURCE_REF")"
+          if [ "$tag_object_type" != "tag" ]; then
+            echo "tag '$SOURCE_REF' is $tag_object_type, not an annotated tag object"
+            echo "create it with: git tag -a $SOURCE_REF -m '...'"
+            exit 1
+          fi
+          echo "ok: '$SOURCE_REF' is an annotated tag object"
+          echo "::endgroup::"
+
+          echo "::group::3. Resolve the tag to its commit"
+          # ^{commit} peels the annotated tag object down to the commit it names.
+          tag_commit="$(git rev-parse --verify "refs/tags/$SOURCE_REF^{commit}")"
+          echo "ok: '$SOURCE_REF' resolves to $tag_commit"
+          echo "::endgroup::"
+
+          echo "::group::4. HEAD is exactly the resolved tag commit"
+          head_commit="$(git rev-parse --verify HEAD)"
+          if [ "$head_commit" != "$tag_commit" ]; then
+            echo "checked-out HEAD $head_commit is not the tag commit $tag_commit"
+            exit 1
+          fi
+          echo "ok: HEAD $head_commit is exactly the commit named by '$SOURCE_REF'"
+          echo "::endgroup::"
+
+          echo "::group::5. That commit is an ancestor of main"
+          if ! git merge-base --is-ancestor "$tag_commit" refs/remotes/origin/main; then
+            echo "$tag_commit is not reachable from main"
+            echo "a tag outside the reviewed history of main is not deliverable"
+            exit 1
+          fi
+          echo "ok: $tag_commit is an ancestor of origin/main $(git rev-parse --short refs/remotes/origin/main)"
+          echo "::endgroup::"
+
+          echo "source_ref=$SOURCE_REF" >> "$GITHUB_OUTPUT"
+          echo "source_commit=$tag_commit" >> "$GITHUB_OUTPUT"
+          echo "VERIFIED: $SOURCE_REF -> $tag_commit, annotated and reachable from main"
+
+      - name: Test selected source
+        run: |
+          python -m unittest discover -s tests -v
+          python -m compileall -q src tests
+
+      # Built exactly once. Every environment below downloads this same artifact
+      # and re-verifies it; none of them rebuilds.
+      - name: Build the artifact once
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          python -m zipapp src \
+            -m 'framework_demo:main' \
+            -o dist/framework-demo.pyz \
+            -p '/usr/bin/env python3'
+          printf '%s\n' "${{ steps.origin.outputs.source_commit }}" > dist/SOURCE_COMMIT
+          cd dist
+          sha256sum framework-demo.pyz SOURCE_COMMIT > SHA256SUMS
+          echo "built from $(cat SOURCE_COMMIT)"
+          cat SHA256SUMS
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: ${{ env.ARTIFACT_NAME }}
+          path: dist/
+          if-no-files-found: error
+          retention-days: 30
+
+  development:
+    name: promote-development
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    environment:
+      name: development
+
+    steps:
+      - name: Download the artifact built by build-artifact
+        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
+        with:
+          name: ${{ env.ARTIFACT_NAME }}
+          path: dist
+
+      - name: Verify checksum, SOURCE_COMMIT and smoke test
+        env:
+          EXPECTED_COMMIT: ${{ needs.build.outputs.source_commit }}
+        run: |
+          set -euo pipefail
+          cd dist
+          sha256sum -c SHA256SUMS
+          promoted_commit="$(cat SOURCE_COMMIT)"
+          if [ "$promoted_commit" != "$EXPECTED_COMMIT" ]; then
+            echo "artifact SOURCE_COMMIT $promoted_commit != verified $EXPECTED_COMMIT"
+            exit 1
+          fi
+          echo "development promoting $promoted_commit"
+          python framework-demo.pyz health
+
+  staging:
+    name: promote-staging
+    needs: [build, development]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    environment:
+      name: staging
+
+    steps:
+      - name: Download the artifact built by build-artifact
+        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
+        with:
+          name: ${{ env.ARTIFACT_NAME }}
+          path: dist
+
+      - name: Verify checksum, SOURCE_COMMIT and smoke test
+        env:
+          EXPECTED_COMMIT: ${{ needs.build.outputs.source_commit }}
+        run: |
+          set -euo pipefail
+          cd dist
+          sha256sum -c SHA256SUMS
+          promoted_commit="$(cat SOURCE_COMMIT)"
+          if [ "$promoted_commit" != "$EXPECTED_COMMIT" ]; then
+            echo "artifact SOURCE_COMMIT $promoted_commit != verified $EXPECTED_COMMIT"
+            exit 1
+          fi
+          echo "staging promoting $promoted_commit"
+          python framework-demo.pyz health
+
+  production:
+    name: promote-production
+    needs: [build, staging]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    environment:
+      name: production
+
+    steps:
+      - name: Download the artifact built by build-artifact
+        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
+        with:
+          name: ${{ env.ARTIFACT_NAME }}
+          path: dist
+
+      - name: Verify checksum, SOURCE_COMMIT and smoke test
+        env:
+          EXPECTED_COMMIT: ${{ needs.build.outputs.source_commit }}
+        run: |
+          set -euo pipefail
+          cd dist
+          sha256sum -c SHA256SUMS
+          promoted_commit="$(cat SOURCE_COMMIT)"
+          if [ "$promoted_commit" != "$EXPECTED_COMMIT" ]; then
+            echo "artifact SOURCE_COMMIT $promoted_commit != verified $EXPECTED_COMMIT"
+            exit 1
+          fi
+          echo "production promoting $promoted_commit"
+          python framework-demo.pyz health
+
+  # Only the tag-push path publishes. A rollback dispatch promotes an earlier
+  # tag through the same gates and deliberately stops here, so the release
+  # history keeps saying what the current version is.
+  release:
+    name: publish-release
+    needs: [build, production]
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download the promoted artifact
+        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
+        with:
+          name: ${{ env.ARTIFACT_NAME }}
+          path: dist
+
+      - name: Re-verify before attaching to the release
+        env:
+          EXPECTED_COMMIT: ${{ needs.build.outputs.source_commit }}
+        run: |
+          set -euo pipefail
+          cd dist
+          sha256sum -c SHA256SUMS
+          promoted_commit="$(cat SOURCE_COMMIT)"
+          if [ "$promoted_commit" != "$EXPECTED_COMMIT" ]; then
+            echo "artifact SOURCE_COMMIT $promoted_commit != verified $EXPECTED_COMMIT"
+            exit 1
+          fi
+          echo "attaching the artifact promoted from $promoted_commit"
+
+      # Creates the release, or updates it if the humans already drafted one for
+      # this tag. A tag containing -rc. is published as a prerelease.
+      - name: Create or update the GitHub Release
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2.6.2
+        with:
+          tag_name: ${{ needs.build.outputs.source_ref }}
+          name: ${{ needs.build.outputs.source_ref }}
+          prerelease: ${{ contains(needs.build.outputs.source_ref, '-rc.') }}
+          generate_release_notes: true
+          fail_on_unmatched_files: true
+          body: |
+            Promoted through `development`, `staging` and `production` by run
+            [${{ github.run_id }}](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}).
+
+            Source commit: `${{ needs.build.outputs.source_commit }}`
+
+            The three assets below are the exact artifact that each environment
+            verified. This is a fictional teaching lab; `production` records the
+            promotion of an artifact and does not operate any service.
+          files: |
+            dist/framework-demo.pyz
+            dist/SOURCE_COMMIT
+            dist/SHA256SUMS
