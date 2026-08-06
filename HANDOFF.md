@@ -3,6 +3,15 @@
 Estado da entrega em 2026-08-05, após a sessão local com `git` e `gh`
 autenticado.
 
+> **Este arquivo está mais novo em disco do que no GitHub, de propósito.**
+> As seções 5 e 8 registram a verificação final, que só pôde ser escrita
+> **depois** de o repositório existir e o ruleset entrar em vigor. Nesse
+> momento `main` já exigia pull request, inclusive do Owner — comprovado em
+> §5.2. Enviar esta atualização exigiria abrir um pull request, que é exercício
+> humano, ou enfraquecer a regra, que seria pior. O commit-base publicado é
+> idêntico ao disco em todos os outros arquivos; a diferença está apenas neste.
+> Ela se resolve sozinha no primeiro pull request do treinamento — ver §8.
+
 Este documento substitui a versão anterior, que registrava a publicação como
 dependência humana. **A infraestrutura foi publicada e configurada pelo
 agente.** O que permanece pendente são os exercícios, que pertencem aos
@@ -135,8 +144,97 @@ ancestralidade. O controle é exercido de fato, não por acidente.
 
 ## 5. Verificação final no remoto
 
-Preenchido com a saída real dos comandos executados ao fim desta sessão — ver
-seção 8.
+Saída real dos comandos executados ao fim desta sessão.
+
+### 5.1 Repositório, CI e workflows
+
+```text
+url:        https://github.com/fabianomag/framework-devops-sandbox
+visibility: PUBLIC  private=false
+default:    main
+commit-base: 87904738c473c1688fd8a202d6c964499502d4ad
+
+CI em main: success
+https://github.com/fabianomag/framework-devops-sandbox/actions/runs/31053082737
+
+workflows reconhecidos:
+CI        active  328192920
+Delivery  active  328192921
+
+check reportado no commit de main:  test-python -> success
+```
+
+### 5.2 Ruleset
+
+```text
+protect-main  enforcement=active  target=branch  id=20480049
+rules in force on main: deletion, non_fast_forward, required_linear_history,
+                        pull_request, required_status_checks
+required check: test-python
+current_user_can_bypass: never
+```
+
+`current_user_can_bypass: never` merece destaque: **nem o Owner tem bypass.**
+Isto foi comprovado na prática — uma tentativa de push direto em `main` após a
+aplicação do ruleset foi recusada pelo próprio GitHub:
+
+```text
+remote: - Changes must be made through a pull request.
+remote: - Required status check "test-python" is expected.
+ ! [remote rejected] main -> main (push declined due to repository rule violations)
+```
+
+A regra é real e vale para quem a criou. Esta é exatamente a lição central do
+laboratório, e ela já está comprovada antes do primeiro exercício.
+
+### 5.3 Ambientes
+
+```text
+development  protection=(nenhuma)
+staging      protection=required_reviewers  reviewer=fabianomag  prevent_self_review=false
+production   protection=required_reviewers  reviewer=fabianomag  prevent_self_review=false
+deployment_branch_policy: none nos três
+```
+
+### 5.4 Caminhos reconhecidos pelo GitHub
+
+```text
+file  .github/CODEOWNERS
+file  .github/workflows/ci.yml
+file  .github/workflows/delivery.yml
+file  .github/governance/ruleset-protect-main.json
+file  .github/governance/ruleset-protect-main-with-reviewers.json
+
+_github no remoto: ausente (404)
+validação de CODEOWNERS pelo GitHub: nenhum erro
+```
+
+A ausência de erros em `/codeowners/errors` é a confirmação do GitHub de que
+`@fabianomag` é um proprietário resolvível — o arquivo é reconhecido, não é só
+texto.
+
+### 5.5 Nada demonstrativo foi criado
+
+```text
+branches:      main   (1)
+pull requests: 0
+tags:          0
+releases:      0
+Delivery runs: 0
+deployments:   0
+collaborators: fabianomag
+invitations:   0
+```
+
+### 5.6 Sincronismo local e remoto
+
+```text
+local HEAD:       87904738c473c1688fd8a202d6c964499502d4ad
+origin/main:      87904738c473c1688fd8a202d6c964499502d4ad
+working tree:     0 arquivos modificados
+commits em main:  1
+diff local..remoto: 0 linhas
+```
 
 ## 6. Exercícios reservados aos humanos — não realizados
 
@@ -171,7 +269,54 @@ Condução: `LAB-OWNER-DEVELOPER.md`. Comandos: `RUNBOOK.md`, a partir da seçã
 
 Nenhum destes impede o treinamento de começar.
 
-## 8. Verificação final executada
+## 8. Divergência conhecida entre arquivo e configuração aplicada
 
-Esta seção é preenchida com a saída dos comandos de verificação ao fim da
-publicação. Ver a mensagem final da sessão.
+Uma única divergência, declarada aqui em vez de escondida.
+
+**O que diverge.** A configuração aplicada do ruleset `protect-main` restringe
+o merge a `squash` apenas. Os arquivos versionados
+`.github/governance/ruleset-protect-main.json` e
+`ruleset-protect-main-with-reviewers.json` ainda **não** trazem a chave
+`allowed_merge_methods`, e portanto descrevem o padrão do GitHub, que aceita os
+três métodos.
+
+**Por que não foi corrigido nesta sessão.** A correção foi escrita e testada,
+mas não pôde ser enviada: assim que o ruleset entrou em vigor, `main` passou a
+exigir pull request, e o próprio agente foi barrado — ver a saída em §5.2. As
+duas saídas seriam abrir um pull request ou enfraquecer a regra. **Abrir pull
+request é exercício humano e enfraquecer a regra seria pior que a divergência.**
+Por isso os arquivos locais foram revertidos ao estado publicado, deixando local
+e remoto idênticos, e a diferença ficou registrada aqui.
+
+**Qual é o risco real: nenhum, hoje.** Squash é a única opção em dois lugares
+independentes já aplicados:
+
+```text
+ruleset protect-main -> allowed_merge_methods: ["squash"]
+repository settings  -> squash=true  merge=false  rebase=false
+```
+
+Além disso `required_linear_history` está ativo. A divergência é de
+documentação, não de comportamento.
+
+**Como fechar — bom primeiro pull request para o treinamento.** Acrescentar
+`"allowed_merge_methods": ["squash"]` ao bloco `pull_request` dos dois arquivos
+e abrir um pull request. Ele exercita branch, check obrigatório e merge por
+squash com uma mudança pequena e de valor real. Depois, conferir:
+
+```bash
+gh api repos/fabianomag/framework-devops-sandbox/rulesets/20480049 \
+  --jq '.rules[] | select(.type=="pull_request") | .parameters.allowed_merge_methods'
+```
+
+## 9. Como continuar
+
+1. Ler `LAB-OWNER-DEVELOPER.md` — quem faz o quê, etapa por etapa.
+2. Convidar o segundo participante quando fizer sentido —
+   `ACESSOS-E-PAPEIS.md` §3. Não é pré-requisito para começar.
+3. Executar o `RUNBOOK.md` **a partir da seção 3**. As seções 0 a 2 já estão
+   feitas e servem apenas como conferência.
+
+O caminho crítico até uma demonstração completa: branch, pull request vermelho,
+merge bloqueado, verde, merge por squash, tag `v0.1.0-rc.1`, promoção com as
+aprovações, `v0.1.1`, e rollback para `v0.1.0`.
