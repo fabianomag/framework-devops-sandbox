@@ -1,8 +1,9 @@
 # COMECE AQUI — material de teste e aprendizado
 
-Guia prático: **só cliques na interface do GitHub, na ordem.** Não precisa de
-terminal. Em ~12 minutos você percorre o fluxo inteiro: branch, pull request,
-check falhando, merge bloqueado, correção, release e deploy nos três ambientes.
+Guia prático para a interface do GitHub. Há **um** comando de terminal para a
+tag anotada, porque criar uma tag pela tela de release gera uma tag leve e o
+workflow `Delivery` a rejeita. Em ~12 minutos: branch, pull request, check
+falhando, merge bloqueado, correção, release e promoção nos três ambientes.
 
 É pra fazer mexendo, não pra ler. Abra o repositório ao lado e vá clicando.
 
@@ -19,7 +20,7 @@ Deixe abertas 3 abas: `Code` · `Actions` · `Settings`.
 >    `development`, `staging` e `production`
 >
 > Montar isso do zero é parte do aprendizado — é o que só o dono do repositório
-> pode fazer. Troque também `@fabianomag` no `.github/CODEOWNERS` pelo seu
+> pode fazer. Troque também os usuários em `.github/CODEOWNERS` pelos seus
 > usuário.
 
 ---
@@ -55,7 +56,11 @@ Aponte na tela: `Require a pull request before merging`, `Require status checks`
 Aba `Code` → arquivo **`tests/test_framework_demo.py`** → ícone do **lápis**
 (canto direito) → editar.
 
-Trocar `"ok"` por `"ready"` (linha do `assertEqual`).
+Adicionar uma asserção que ainda não é satisfeita:
+
+```python
+self.assertEqual(health()["component"], "framework-demo")
+```
 
 Botão verde **Commit changes...** → marcar a 2ª opção
 **"Create a new branch for this commit and start a pull request"** →
@@ -81,9 +86,14 @@ Volte ao PR: o botão **Merge** está **cinza/bloqueado**.
 
 ## 4. Corrigir e ver ficar VERDE (2 min)
 
-No PR → aba **Files changed** → ícone do **lápis** no arquivo →
-volta `"ready"` para `"ok"` → **Commit changes** → **Commit directly to the
-`feat/demo` branch**.
+No PR → aba **Files changed** → ícone do **lápis** em
+`src/framework_demo.py` → adicionar ao dicionário retornado por `health()`:
+
+```python
+"component": "framework-demo",
+```
+
+→ **Commit changes** → **Commit directly to the `feat/demo` branch**.
 
 Espere ~40s → **test-python — Success** ✅ → botão **Merge** libera.
 
@@ -97,11 +107,18 @@ Clique **Squash and merge** → **Confirm squash and merge** →
 
 ## 5. Release + deploy nos 3 ambientes (3 min)
 
-Aba `Code` → direita, seção **Releases** → **Create a new release**.
+No terminal, na cópia local já sincronizada:
 
-- **Choose a tag** → digitar `v0.1.0` → **+ Create new tag: v0.1.0 on publish**
-- Title: `v0.1.0`
-- **Publish release**
+```bash
+git switch main
+git pull --ff-only
+git tag -a v0.1.0 -m 'Release v0.1.0'
+git push origin v0.1.0
+```
+
+Não use **Create new tag** na tela de Releases: ele cria uma tag leve. Aqui a
+tag anotada é o gatilho auditável da entrega e a release será criada pelo
+workflow.
 
 Vá para **Actions** → workflow **Delivery** rodando sozinho.
 
@@ -160,9 +177,7 @@ Mostre: **Required reviewers** = você.
 
 ## ⚠️ Antes da reunião
 
-Os passos 2 a 5 **nunca foram executados** — não existe PR, tag nem release
-ainda. Se puder, rode uma vez sozinho antes (10 min) e depois **apague a
-release e a tag** em `Releases` → `Delete`, para repetir ao vivo.
-
-Se não der tempo: faça **ao vivo mesmo**, na ordem acima. Funciona — só depende
-do runner do GitHub, que leva ~40s por check.
+Use uma execução já concluída como evidência. **Não apague tags, releases ou
+execuções de ensaio**: elas são a trilha auditável da apresentação. Para uma
+demonstração ao vivo, abra uma nova branch e repita a mesma jornada com uma
+nova versão SemVer.

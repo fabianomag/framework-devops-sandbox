@@ -33,9 +33,10 @@ do mesmo digest binário.
 
 ## Comece por aqui
 
-**[`COMECE-AQUI.md`](COMECE-AQUI.md)** — guia prático, só cliques na interface
-do GitHub. Em ~12 minutos você percorre o fluxo inteiro sem usar terminal. É o
-material para testar e aprender mexendo.
+**[`COMECE-AQUI.md`](COMECE-AQUI.md)** — guia prático para a demonstração. O
+fluxo usa a interface do GitHub; a criação da tag anotada usa um único comando
+de terminal, pois o botão de release do GitHub cria tag leve e este laboratório
+a recusa deliberadamente.
 
 ## Estado atual
 
@@ -43,10 +44,10 @@ A infraestrutura está pronta: os workflows `CI` e `Delivery`, o ruleset
 `protect-main` exigindo o check `test-python`, e os ambientes `development`,
 `staging` e `production`.
 
-Os exercícios **ainda não foram realizados**. Não existe nenhuma branch além de
-`main`, nenhum pull request, nenhuma tag, nenhuma release e nenhuma execução de
-`Delivery`. Isso é deliberado: executá-los é o treinamento, e ele começa na
-criação da primeira branch. Ver `LAB-OWNER-DEVELOPER.md`.
+O estado verificável — branches, pull requests, tags, releases e promoções — é
+registrado em [`HANDOFF.md`](HANDOFF.md). As configurações remotas pertencem a
+`@Heveraldoo`; `@fabianomag` atua como colaborador com escrita e instrutor do
+laboratório.
 
 ## Como está organizado
 

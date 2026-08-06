@@ -3,11 +3,11 @@
 Procedimento humano do laboratório. O agente preparou a base; os passos abaixo
 são o exercício e pertencem ao operador principal e ao segundo participante.
 
-Convenções: `OWNER=fabianomag`, `REPO=framework-devops-sandbox`.
+Convenções: `OWNER=Heveraldoo`, `REPO=framework-devops-sandbox`.
 Nenhum comando aqui pede, imprime ou cria credencial.
 
 ```bash
-export OWNER=fabianomag
+export OWNER=Heveraldoo
 export REPO=framework-devops-sandbox
 ```
 
@@ -58,8 +58,9 @@ gh auth status
 git switch -c feat/health-endpoint
 ```
 
-Editar `tests/test_framework_demo.py` e trocar `"ok"` por `"ready"`. Rodar e
-guardar a falha:
+Editar `tests/test_framework_demo.py` e adicionar a expectativa de um campo
+que ainda não existe: `self.assertEqual(health()["component"],
+"framework-demo")`. Rodar e guardar a falha:
 
 ```bash
 python3 -m unittest discover -s tests -v
@@ -105,12 +106,13 @@ request bloqueado e o link do run vermelho como evidência.
 git switch feat/health-endpoint
 ```
 
-Restaurar `"ok"` no teste e enviar:
+Adicionar `"component": "framework-demo"` ao dicionário retornado por
+`health()` em `src/framework_demo.py` e enviar:
 
 ```bash
 python3 -m unittest discover -s tests -v
-git add tests/test_framework_demo.py
-git commit -m 'test: restore the expected health status'
+git add src/framework_demo.py
+git commit -m 'feat: add health component metadata'
 git push
 ```
 
@@ -143,8 +145,8 @@ dispatch aqui. Seguir para a seção 7.
 ## 7. Acompanhar a promoção
 
 ```bash
-gh run list --workflow Delivery --limit 3
-gh run watch
+RUN_ID=$(gh run list --workflow Delivery --limit 1 --json databaseId --jq '.[0].databaseId')
+gh run watch "$RUN_ID"
 ```
 
 O que acontece, nesta ordem:
@@ -162,17 +164,17 @@ deploy`. Uma vez para `staging`, outra para `production`.
 Provar que os três ambientes receberam o mesmo artefato:
 
 ```bash
-gh run view --log | grep -E 'promoting|SOURCE_COMMIT|: OK'
+gh run view "$RUN_ID" --log | grep -E 'promoting|SOURCE_COMMIT|: OK'
 ```
 
 Confirmar o mesmo `SOURCE_COMMIT` nos três jobs e o `sha256sum -c` bem-sucedido
 em cada um. Baixar e verificar por conta própria:
 
 ```bash
-gh run download --name "framework-demo-<RUN_ID>" --dir /tmp/promoted
-cd /tmp/promoted
+gh run download "$RUN_ID" --name "framework-demo-$RUN_ID" --dir /tmp/promoted
+(cd /tmp/promoted
 shasum -a 256 -c SHA256SUMS
-python3 framework-demo.pyz health
+python3 framework-demo.pyz health)
 ```
 
 ## 8. Conferir a release publicada
@@ -200,13 +202,8 @@ O envio da tag dispara o `Delivery` de novo: nova promoção, novas aprovações
 `staging` e `production`, e a release `v0.1.0` criada ao final — desta vez não
 como prerelease.
 
-Se preferir revisar as notas antes de a release ficar visível, criar o rascunho
-**antes** de enviar a tag; o workflow atualiza a release existente em vez de
-criar outra:
-
-```bash
-gh release create v0.1.0 --draft --title v0.1.0 --generate-notes
-```
+Não crie uma release manual antes do push da tag: o workflow é a fonte de
+verdade para publicação e anexos.
 
 ## 10. Criar a versão corrente `0.1.1`
 

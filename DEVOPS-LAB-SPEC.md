@@ -3,7 +3,7 @@
 Especificação canônica da implementação deste laboratório. Nada é implementado
 fora dela. Sugestão adicional vai para `BACKLOG-MELHORIAS.md`.
 
-Repositório autorizado: `fabianomag/framework-devops-sandbox`, público, MIT.
+Repositório autorizado: `Heveraldoo/framework-devops-sandbox`, público, MIT.
 
 ## 1. Objetivo
 
@@ -57,17 +57,17 @@ Configuração remota, executada pelo agente:
 
 | Item | Estado |
 | --- | --- |
-| Repositório público `fabianomag/framework-devops-sandbox` criado | executado |
+| Repositório público `Heveraldoo/framework-devops-sandbox` configurado | executado |
 | Commit-base único em `main`, enviado | executado |
 | Primeiro CI em `main` verde | executado |
 | Ruleset `protect-main` ativo, exigindo `test-python` | executado |
 | Ambientes `development`, `staging` e `production` criados | executado |
 | Merge por squash como única estratégia | executado |
 
-### 3.2 Os humanos executam — exercícios ainda não realizados
+### 3.2 Exercícios e ensaios
 
-**O treinamento começa na criação da primeira branch.** Nada abaixo foi
-executado, e nada abaixo deve ser executado pelo agente:
+O treinamento começa na criação da primeira branch. O estado real dos ensaios
+é registrado em `HANDOFF.md`; não presuma que a lista abaixo esteja pendente.
 
 | Exercício | Estado |
 | --- | --- |

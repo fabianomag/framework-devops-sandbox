@@ -1,6 +1,6 @@
 # CODEOWNERS
 #
-# Declares @fabianomag as the owner of the protected content of this
+# Declares the current owner and instructor as owners of the protected content of this
 # laboratory: the automation, the governance configuration and the normative
 # documents.
 #
@@ -34,25 +34,25 @@
 #
 # Do all three only once the second participant can actually approve, and
 # record the change in DECISIONS.md. Note that step 2 and step 3 together mean
-# @fabianomag can no longer merge his own change to a protected path
+# neither listed user can merge their own change to a protected path
 # unassisted, which is the intended lesson about separation of duties.
 
 # Everything, unless a more specific rule below overrides it.
 # The last matching pattern wins in CODEOWNERS.
-*                                   @fabianomag
+*                                   @Heveraldoo @fabianomag
 
 # Automation and governance: the protected content of the lab.
-/.github/                           @fabianomag
-/.github/workflows/                 @fabianomag
-/.github/governance/                @fabianomag
-/.github/CODEOWNERS                 @fabianomag
+/.github/                           @Heveraldoo @fabianomag
+/.github/workflows/                 @Heveraldoo @fabianomag
+/.github/governance/                @Heveraldoo @fabianomag
+/.github/CODEOWNERS                 @Heveraldoo @fabianomag
 
 # Normative documents: the rules of the lab and the record of its decisions.
-/AGENTS.md                          @fabianomag
-/CLAUDE.md                          @fabianomag
-/DEVOPS-LAB-SPEC.md                 @fabianomag
-/DECISIONS.md                       @fabianomag
-/ACESSOS-E-PAPEIS.md                @fabianomag
+/AGENTS.md                          @Heveraldoo @fabianomag
+/CLAUDE.md                          @Heveraldoo @fabianomag
+/DEVOPS-LAB-SPEC.md                 @Heveraldoo @fabianomag
+/DECISIONS.md                       @Heveraldoo @fabianomag
+/ACESSOS-E-PAPEIS.md                @Heveraldoo @fabianomag
 
 # Source and tests are intentionally NOT restricted beyond the wildcard above.
 # The second participant is meant to change these freely during the exercises.
