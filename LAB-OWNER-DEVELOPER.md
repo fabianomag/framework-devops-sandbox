@@ -229,8 +229,8 @@ Agora o laboratório demonstra o que não podia demonstrar sozinho: **separaçã
 de funções**. Com essas regras ligadas, o Owner não consegue mais mesclar a
 própria mudança em caminho protegido nem aprovar a própria promoção.
 
-O que a inversão **não** muda: o papel técnico. O Fabiano continua Owner e o
-segundo participante continua Collaborator, porque um repositório pessoal tem
+O que a inversão **não** muda: o papel técnico. Heveraldo continua Owner e
+Fabiano/segundo participante continuam Collaborators, porque um repositório pessoal tem
 só esses dois níveis. Uma inversão técnica de verdade exigiria uma organização.
 
 ## 7. Erros comuns e o que dizer

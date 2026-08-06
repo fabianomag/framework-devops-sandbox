@@ -51,7 +51,8 @@ linear de `main`.
 
 Mostrar a tag anotada e a release com os três assets anexados.
 
-"A tag é um ponto imutável do histórico. A release é a decisão de distribuir
+"A tag é tratada neste laboratório como ponto imutável do histórico; ainda não
+há ruleset técnico para proteger tags. A release é a decisão de distribuir
 aquele ponto. São coisas diferentes, e misturar as duas é como se perde
 rastreabilidade."
 

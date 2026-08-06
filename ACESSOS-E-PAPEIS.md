@@ -4,7 +4,7 @@ Quem tem qual acesso neste laboratório, o que esse acesso realmente permite e o
 que ele não permite. Este documento descreve o modelo de permissões do GitHub
 como ele é, não como seria conveniente que fosse.
 
-Repositório: `fabianomag/framework-devops-sandbox`, público, pessoal.
+Repositório: `Heveraldoo/framework-devops-sandbox`, público, pessoal.
 
 ## 1. O limite honesto: repositório pessoal só tem dois papéis
 
@@ -15,7 +15,7 @@ Um repositório pessoal tem exatamente dois níveis de acesso:
 
 | Papel | Quem pode ter | O que permite |
 | --- | --- | --- |
-| **Owner** | somente `@fabianomag` | tudo: administração, settings, rulesets, environments, exclusão do repositório, gestão de colaboradores |
+| **Owner** | somente `@Heveraldoo` | tudo: administração, settings, rulesets, environments, exclusão do repositório, gestão de colaboradores |
 | **Collaborator** | qualquer conta convidada | push, abrir e revisar pull requests, criar branches e tags, criar releases |
 
 Não existe meio-termo. Um colaborador de repositório pessoal recebe, na
@@ -48,10 +48,11 @@ abaixo separa os dois.
 
 | Pessoa | Papel pedagógico | Papel técnico no GitHub | Estado |
 | --- | --- | --- | --- |
-| Fabiano (`@fabianomag`) | Master / administrador e instrutor | Owner | ativo |
-| Segundo participante | Aprendiz do fluxo de entrega | Collaborator | **ainda não convidado** |
+| Heveraldo (`@Heveraldoo`) | Owner técnico do laboratório | Owner | ativo |
+| Fabiano (`@fabianomag`) | Instrutor / operador do ensaio | Collaborator (`Write`) | ativo |
+| Segundo participante | Aprendiz do fluxo de entrega | Collaborator | a definir |
 
-### Fabiano — Master, administrador e instrutor
+### Heveraldo — Owner técnico; Fabiano — instrutor e operador
 
 Responsável por:
 
@@ -93,17 +94,17 @@ Pela interface: `Settings` -> `Collaborators` -> `Add people`.
 Por linha de comando:
 
 ```bash
-gh api --method PUT "repos/fabianomag/framework-devops-sandbox/collaborators/USERNAME" \
+gh api --method PUT "repos/Heveraldoo/framework-devops-sandbox/collaborators/USERNAME" \
   -f permission=push
 ```
 
 Conferir o convite pendente e os colaboradores atuais:
 
 ```bash
-gh api "repos/fabianomag/framework-devops-sandbox/invitations" \
+gh api "repos/Heveraldoo/framework-devops-sandbox/invitations" \
   --jq '.[] | [.invitee.login, .permissions, .created_at] | @tsv'
 
-gh api "repos/fabianomag/framework-devops-sandbox/collaborators" \
+gh api "repos/Heveraldoo/framework-devops-sandbox/collaborators" \
   --jq '.[] | [.login, .role_name] | @tsv'
 ```
 
@@ -143,7 +144,7 @@ Pela interface: `Settings` -> `Rules` -> `Rulesets` -> `protect-main` ->
 Por linha de comando, obter o id do ruleset e aplicar o arquivo já preparado:
 
 ```bash
-OWNER=fabianomag REPO=framework-devops-sandbox
+OWNER=Heveraldoo REPO=framework-devops-sandbox
 
 RULESET_ID=$(gh api "repos/$OWNER/$REPO/rulesets" --jq '.[] | select(.name=="protect-main") | .id')
 
@@ -199,9 +200,9 @@ A inversão exige apenas trocar o revisor dos environments — comando da seçã
 aprovação de alguém diferente de quem fez o último push, e isso funciona nos
 dois sentidos.
 
-**O que a inversão não muda:** o papel técnico. Fabiano continua Owner e o
-segundo participante continua Collaborator. A inversão é pedagógica. Para que a
-inversão fosse também técnica — dois administradores de verdade — seria
+**O que a inversão não muda:** o papel técnico. Heveraldo continua Owner e
+Fabiano/segundo participante continuam Collaborators. A inversão é pedagógica.
+Para que ela fosse também técnica — dois administradores de verdade — seria
 necessária uma organização, pelo motivo da seção 1.
 
 Critério para considerar a inversão bem-sucedida: o segundo participante
