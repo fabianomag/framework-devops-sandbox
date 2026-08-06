@@ -31,6 +31,12 @@ serviço em produção.
 O exercício de rollback reconstrói a fonte da versão anterior. Não é a promoção
 do mesmo digest binário.
 
+## Comece por aqui
+
+**[`COMECE-AQUI.md`](COMECE-AQUI.md)** — guia prático, só cliques na interface
+do GitHub. Em ~12 minutos você percorre o fluxo inteiro sem usar terminal. É o
+material para testar e aprender mexendo.
+
 ## Estado atual
 
 A infraestrutura está pronta: os workflows `CI` e `Delivery`, o ruleset
